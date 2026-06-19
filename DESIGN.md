@@ -6,18 +6,19 @@ Engram splits into two paths that **never mix**:
  CAPTURE (async, never blocks)              RECALL (deterministic, in-hook)
  ──────────────────────────────             ───────────────────────────────
  Stop ─┐                                     SessionStart ─► inject budgeted
- PreCompact ─┼─► spawn detached distiller                    index (project + global)
- SessionEnd ─┘        │
-                      ▼                      UserPromptSubmit ─► tokenize, score,
-        read NEW transcript bytes                 inject top-3 full bodies,
-        (per-session byte cursor)                 dedup per session
-                      │                                   ▲
-                      ▼                                   │ intra-session freshness:
-        claude -p (haiku) → JSON actions    ┌─────────────┘ a memory distilled after
-                      │                      │ turn N is recallable at turn N+1 —
-                      ▼                      │ no daemon, store re-read fresh
-        create/update memories/*.md ────────┘
-        rebuild INDEX.md
+ UserPromptSubmit ─┼─► spawn detached                        index (project + global)
+ PreCompact ─┤     │   distiller
+ SessionEnd ─┘     │
+                   ▼                         UserPromptSubmit ─► tokenize, score,
+         read NEW transcript bytes                inject top-3 full bodies,
+         (per-session byte cursor)                dedup per session
+                   │                                      ▲
+                   ▼                                      │ intra-session freshness:
+         claude -p (haiku) → JSON actions   ┌─────────────┘ a memory distilled after
+                   │                         │ turn N is recallable at turn N+1 —
+                   ▼                         │ no daemon, store re-read fresh
+         create/update memories/*.md ───────┘
+         rebuild INDEX.md
 ```
 
 The capture path is the *only* non-deterministic part, and it is async, detached, and off
@@ -120,9 +121,9 @@ of the gap (recall off the assistant's last turn) is a tracked proposal — see 
 
 ## The distiller
 
-`distiller.py` is spawned (never awaited) by the capture hooks with `--session` and
-`--transcript`. Steps: **lock** (per-session, stale >10 min broken) → **cursor** (read only new
-bytes) → **digest** (parse JSONL to USER/ASSISTANT text + one-line tool notes; a tool-only turn
+`distiller.py` is spawned (never awaited) by the capture hooks (`Stop`, `UserPromptSubmit`,
+`PreCompact`, `SessionEnd`) with `--session` and `--transcript`. Steps: **lock** (per-session,
+stale >10 min broken) → **cursor** (read only new bytes) → **digest** (parse JSONL to USER/ASSISTANT text + one-line tool notes; a tool-only turn
 is *not substantive* → advance cursor, no LLM — a free gate) → **LLM** (`claude -p --model haiku
 --output-format json`, 180 s) → **apply** (create/update, union keywords, rebuild INDEX.md) →
 **advance cursor even on failure**, release lock.
@@ -161,7 +162,7 @@ is capped at 120 words. Quality here is expected to be tuned empirically against
 The scoring scheme is the first rung of a ladder; each step adds a signal as a plain number,
 never an opaque model:
 
-1. **v1 — keyword scoring + the gate.** This build. Ship it.
+1. **v1 — keyword scoring + the gate.** Current (v0.2).
 2. **v2 — recency decay + reciprocal-rank fusion** (SuperBrain-proven; still no vectors).
 3. **v3 — trust/importance accrual:** a frontmatter `weight` that rises on re-confirmation,
    decays on contradiction (Hermes's trust model, reduced to one auditable number).
@@ -177,7 +178,7 @@ replacing it.
 |---|---|
 | `scripts/common.py` | store paths, frontmatter, tokenize/score+gate, index render, spawn, guards, log |
 | `scripts/session_start.py` | SessionStart — warm with budgeted index, `WARMUP` log |
-| `scripts/user_prompt.py` | UserPromptSubmit — score, gate, inject top-3, dedup, `RECALL` log |
+| `scripts/user_prompt.py` | UserPromptSubmit — score, gate, inject top-3, dedup, `RECALL` log; also spawns distiller |
 | `scripts/stop_distill.py` · `precompact.py` · `session_end.py` | capture hooks — guard + detached spawn (+ housekeeping) |
 | `scripts/distiller.py` | the detached worker — the only LLM caller |
 | `scripts/memctl.py` | `/engram` CLI — status / search / forget / clear / prune / reindex |

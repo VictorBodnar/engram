@@ -4,7 +4,27 @@ All notable changes to Engram are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] — 2026-06-19
+## [0.2.0] — 2026-06-19
+
+Plugin-only distribution, CI pipeline, and security hardening.
+
+### Changed
+- **Plugin-only distribution** — install via the plugin marketplace (`/plugin marketplace add`);
+  `scripts/install.sh` remains for local dev installs with live-edit symlinks.
+- **CI pipeline** — GitHub Actions run smoke tests on Python 3.9 + 3.12, validate plugin/hooks
+  JSON, and warn on un-bumped versions. On merge to main, the release workflow auto-tags and
+  creates a GitHub release from the version in `plugin.json`.
+- **Security hardening** — shell scripts pass file paths via environment variables instead of
+  string interpolation; the distiller uses `--system-prompt` to override the default agentic
+  framing (works under OAuth auth, unlike `--bare`).
+- **Prompt-submit capture** — `UserPromptSubmit` now also spawns the distiller (in addition to
+  `Stop`/`PreCompact`/`SessionEnd`), so corrections made mid-conversation are captured sooner.
+- **SessionStart GC** — `housekeep()` now also runs at `SessionStart` (best-effort), so stale
+  state is cleaned up even when `SessionEnd` never fires.
+- **`/engram doctor`** — new self-diagnostic command that checks store writability, cache
+  freshness, distiller reachability, hook config, log health, and stale locks.
+
+## [0.1.0] — 2026-06-14
 
 First packaged release: a deterministic, hook-based memory system for Claude Code that
 captures durable facts asynchronously and recalls them with a reproducible keyword scorer.

@@ -62,7 +62,7 @@ what you just typed"). There's no keyword scoring at warmup because there's no p
 
 ---
 
-## Changes shipped this session
+## Changes shipped during dogfooding
 
 ### Type-aware warmup — `session_start.py`
 - `WARMUP_PRIORITY = {"correction": 0, "state": 1, "knowledge": 2}`; sort key changed from
@@ -93,15 +93,14 @@ what you just typed"). There's no keyword scoring at warmup because there's no p
 
 ---
 
-## Open gaps & proposed fixes
+## Known limitations & future work
 
-### BUG — standing preferences mis-scoped to a project
-- `aws-cli-over-sdk-preference` (a universal "always use the CLI") was tagged
-  `project=claude-memory-plugin`, **not `global`**. In any *other* project it's invisible to both
-  warmup and recall.
-- **Immediate fix:** re-tag it `global`.
+### Distiller scoping can mis-tag global preferences
+- A universal preference ("always use the CLI, not the SDK") can be tagged with the project it was
+  first stated in, instead of `global`. In other projects it's invisible to both warmup and recall.
+- **Workaround:** hand-edit the memory's `project:` field to `global`.
 - **Root cause:** the distiller's scoping heuristic. Preferences/corrections phrased universally
-  ("always/never…") should be tagged `global`, not the local project. Tune the distiller prompt.
+  ("always/never…") should be tagged `global`. The distiller prompt will be tuned for this.
 
 ### Standing preferences want *pinning/warming*, not reactive recall
 - The right defense against "the assistant is about to do the wrong thing" is for the preference
