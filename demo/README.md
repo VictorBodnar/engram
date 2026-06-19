@@ -1,7 +1,7 @@
 # Engram demo
 
-A narrated, **fully offline** walkthrough of the capture &rarr; recall &rarr; housekeeping
-loop. No network and no live LLM &mdash; the distiller reads a canned JSON fixture
+A narrated, **fully offline** walkthrough of the capture → recall → housekeeping
+loop. No network and no live LLM — the distiller reads a canned JSON fixture
 (`tests/fixtures/distilled.json`) via `CLAUDE_MEMORY_FAKE_LLM`, the same mechanism the
 smoke test uses. It runs against a throwaway store and cleans up after itself.
 
@@ -14,7 +14,7 @@ bash demo/demo.sh --fast   # no pauses (for recording)
 
 ## What you'll see
 
-### 1. Capture &mdash; a Stop hook spawns a detached distiller
+### 1. Capture — a Stop hook spawns a detached distiller
 
 ```
  1) CAPTURE — a Stop hook spawns a DETACHED distiller and returns instantly
@@ -38,7 +38,7 @@ bash demo/demo.sh --fast   # no pauses (for recording)
  commands reliably.
 ```
 
-### 2. Status &mdash; what's in the store
+### 2. Status — what's in the store
 
 ```
  2) STATUS — what's in the store?
@@ -53,7 +53,7 @@ bash demo/demo.sh --fast   # no pauses (for recording)
    2026-06-19T10:00:01Z CREATE session=demo slug=split-shell-commands type=correction project=global
 ```
 
-### 3. Search &mdash; the same scorer recall uses
+### 3. Search — the same scorer recall uses
 
 ```
  3) SEARCH — the SAME integer scorer recall uses, exposed for debugging
@@ -62,7 +62,7 @@ bash demo/demo.sh --fast   # no pauses (for recording)
  →  11  split-shell-commands (correction·global) — Split shell commands instead of chaining with &&
 ```
 
-### 4. Recall &mdash; deterministic injection
+### 4. Recall — deterministic injection
 
 ```
  4) RECALL — a fresh prompt; UserPromptSubmit scores memories and injects the winner
@@ -72,7 +72,7 @@ bash demo/demo.sh --fast   # no pauses (for recording)
  ↑ that <recalled-memories> block is injected into the model's context — deterministically.
 ```
 
-### 5. The log &mdash; every decision is greppable
+### 5. The log — every decision is greppable
 
 ```
  5) THE LOG — every decision is ONE greppable line; scores are hand-recomputable

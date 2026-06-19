@@ -112,7 +112,7 @@ flowchart LR
 |  | **Capture** (write) | **Recall** (read) |
 |---|---|---|
 | **When** | Stop, UserPromptSubmit, PreCompact, SessionEnd | SessionStart + every UserPromptSubmit |
-| **LLM?** | Yes &mdash; **detached** Haiku, off the hot path | **Never** &mdash; integer arithmetic only |
+| **LLM?** | Yes — **detached** Haiku, off the hot path | **Never** — integer arithmetic only |
 | **Speed** | Hooks return `{}` in milliseconds | In-hook, deterministic |
 | **What** | Reads new transcript bytes, extracts durable facts | Scores every memory against your prompt |
 
@@ -123,9 +123,9 @@ flowchart LR
 |  | **Engram** | **Native auto-memory** |
 |---|---|---|
 | **Storage** | Plain `.md` files you can read, edit, `grep` | Opaque internal format |
-| **Recall** | Deterministic integer scoring &mdash; reproducible | Model-driven, non-reproducible |
+| **Recall** | Deterministic integer scoring — reproducible | Model-driven, non-reproducible |
 | **Debugging** | `grep` the log; recompute any score by hand | No visibility into recall decisions |
-| **Capture** | Hook &rarr; Haiku &rarr; markdown with frontmatter | Automatic, invisible |
+| **Capture** | Hook → Haiku → markdown with frontmatter | Automatic, invisible |
 | **Control** | `/engram search`, `forget`, `clear`, `doctor` | Limited |
 
 ---
@@ -184,7 +184,7 @@ flowchart LR
 | Memory type is **correction** | **+1** | Standing preferences get a boost |
 
 **Gate:** a memory must have at least one keyword or title hit. Project and type bonuses
-only *boost* a real hit &mdash; they can never qualify a memory alone.
+only *boost* a real hit — they can never qualify a memory alone.
 
 ### Worked example
 
@@ -248,10 +248,10 @@ Recall surfaces topic-specific knowledge *when* you mention it.
     └── memory.log                    ← structured, greppable audit trail
 ```
 
-- You can edit memory files by hand &mdash; Engram re-reads from disk on every prompt
+- You can edit memory files by hand — Engram re-reads from disk on every prompt
 - `INDEX.md` is a browse mirror only; the runtime never reads it
 - State is garbage-collected after 7 days; the log rotates at 2 MB
-- Everything in one folder &mdash; trivial to inspect, trivial to delete
+- Everything in one folder — trivial to inspect, trivial to delete
 
 ---
 
@@ -277,7 +277,7 @@ query tokens: shell, commands
     3  use-make-targets (knowledge·myproject) — Use make targets for common operations
 ```
 
-The `→` marks memories that would be injected (score &ge; 3 and within the top 3).
+The `→` marks memories that would be injected (score ≥ 3 and within the top 3).
 
 ---
 
@@ -287,13 +287,13 @@ The `→` marks memories that would be injected (score &ge; 3 and within the top
 |---|---|---|
 | `CLAUDE_MEMORY_HOME` | `~/.claude/memory-store` | Store location. Set per-project to isolate stores. |
 | `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | *(unset)* | Set to `1` to disable native auto-memory (recommended). |
-| `CLAUDE_MEMORY_FAKE_LLM` | *(unset)* | Path to canned JSON &mdash; distiller reads it instead of calling Haiku (for testing). |
+| `CLAUDE_MEMORY_FAKE_LLM` | *(unset)* | Path to canned JSON — distiller reads it instead of calling Haiku (for testing). |
 
 ---
 
 ## Troubleshooting
 
-Start with `/engram doctor` &mdash; it checks everything in one shot:
+Start with `/engram doctor` — it checks everything in one shot:
 
 ```
 Engram doctor
@@ -331,7 +331,7 @@ commands:
 
 | Symptom | Fix |
 |---|---|
-| 0 memories after install | Normal &mdash; first capture happens after a substantive turn. |
+| 0 memories after install | Normal — first capture happens after a substantive turn. |
 | No memories ever appear | Check `claude` CLI is on PATH and authenticated. `grep ERROR` in the log. |
 | Duplicate injections | Native auto-memory is still on. Set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. |
 | Stale cache after updating | Run `bash scripts/update.sh` or reinstall. `/engram doctor` will tell you. |
@@ -367,10 +367,10 @@ version in `.claude-plugin/plugin.json`. Bump the version in your PR.
 
 ## Requirements
 
-- **Python 3.9+** (stdlib only &mdash; zero third-party packages)
-- **`claude` CLI on PATH**, authenticated (reuses Claude Code's own auth &mdash; no separate API key)
+- **Python 3.9+** (stdlib only — zero third-party packages)
+- **`claude` CLI on PATH**, authenticated (reuses Claude Code's own auth — no separate API key)
 - **Claude Code** with plugin support
 
 ## License
 
-[MIT](./LICENSE) &mdash; Victor Bodnar
+[MIT](./LICENSE) — Victor Bodnar
