@@ -88,20 +88,20 @@ recent distiller activity:
 
 ```mermaid
 flowchart LR
-    subgraph Capture ["CAPTURE &mdash; async, never blocks"]
+    subgraph Capture ["CAPTURE — async, never blocks"]
         direction TB
-        H["Hook fires<br/>(Stop &middot; UserPromptSubmit &middot;<br/>PreCompact &middot; SessionEnd)"]
+        H["Hook fires<br/>(Stop · UserPromptSubmit ·<br/>PreCompact · SessionEnd)"]
         D["Spawn detached distiller<br/>(claude -p haiku)"]
-        W["Read new transcript bytes<br/>&darr;<br/>Extract durable facts<br/>&darr;<br/>Write memories/*.md"]
+        W["Read new transcript bytes<br/>↓<br/>Extract durable facts<br/>↓<br/>Write memories/*.md"]
         H --> D --> W
     end
 
     Store[("memory-store/<br/>plain markdown")]
 
-    subgraph Recall ["RECALL &mdash; deterministic, in-hook"]
+    subgraph Recall ["RECALL — deterministic, in-hook"]
         direction TB
-        SS["SessionStart &rarr; inject<br/>budgeted memory index"]
-        UPS["UserPromptSubmit &rarr;<br/>tokenize, score, inject top 3"]
+        SS["SessionStart → inject<br/>budgeted memory index"]
+        UPS["UserPromptSubmit →<br/>tokenize, score, inject top 3"]
     end
 
     W --> Store
@@ -140,13 +140,13 @@ sequenceDiagram
     participant St as memory-store/
 
     S->>H: Stop / UserPromptSubmit / etc.
-    H->>D: spawn detached (fire & forget)
+    H->>D: spawn detached (fire and forget)
     H-->>S: return {} instantly
 
-    Note over D: Runs in background &mdash;<br/>your session never waits
+    Note over D: Runs in background,<br/>your session never waits
 
     D->>D: Read new transcript bytes<br/>(per-session byte cursor)
-    D->>D: claude -p haiku &rarr; JSON
+    D->>D: claude -p haiku → JSON
     D->>St: Write/update memories/*.md
     D->>St: Rebuild INDEX.md
     D->>St: Log CREATE/UPDATE
@@ -168,10 +168,10 @@ sequenceDiagram
 flowchart LR
     P["Your prompt"] --> T["Tokenize<br/>(lowercase, drop stopwords)"]
     T --> SC["Score every memory<br/>(integer arithmetic)"]
-    SC --> G{"Score &ge; 3?"}
+    SC --> G{"Score ≥ 3?"}
     G -->|Yes| Top["Take top 3<br/>(not yet seen this session)"]
     G -->|No| Skip["Skip"]
-    Top --> Inject["Inject as<br/>&lt;recalled-memories&gt;"]
+    Top --> Inject["Inject into context"]
 ```
 
 ### Scoring rules
