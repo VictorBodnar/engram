@@ -429,6 +429,8 @@ def stop_hook_active(data: dict) -> bool:
 def spawn_distiller(session_id: str, transcript_path: str) -> bool:
     distiller = Path(__file__).resolve().parent / "distiller.py"
     if not distiller.exists():
+        log("ERROR", worker="spawn", session=session_id,
+            err=f"distiller not found: {distiller}")
         return False
     try:
         subprocess.Popen(
@@ -442,7 +444,8 @@ def spawn_distiller(session_id: str, transcript_path: str) -> bool:
             env=os.environ.copy(),
         )
         return True
-    except (OSError, ValueError):
+    except (OSError, ValueError) as e:
+        log("ERROR", worker="spawn", session=session_id, err=repr(e)[:200])
         return False
 
 

@@ -227,13 +227,24 @@ def extract_json_array(text: str):
 
 def parse_actions(raw: str):
     text = raw.strip()
-    # unwrap the `claude --output-format json` envelope if present
+    # unwrap the `claude --output-format json` envelope if present.
+    # claude -p can emit multiple JSON lines (progress events then result);
+    # try each line last-to-first to find the result envelope.
+    env = None
     try:
         env = json.loads(text)
-        if isinstance(env, dict) and "result" in env:
-            text = env["result"]
     except (ValueError, json.JSONDecodeError):
-        pass
+        for line in reversed(text.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                env = json.loads(line)
+                break
+            except (ValueError, json.JSONDecodeError):
+                continue
+    if isinstance(env, dict) and "result" in env:
+        text = env["result"]
     actions = extract_json_array(text)
     if not isinstance(actions, list):
         raise ValueError("model output is not a JSON array")
@@ -300,7 +311,9 @@ def main():
         cursor = c.read_cursor(session)
         data, new_offset = read_new_bytes(args.transcript, cursor)
         if not data:
-            c.log("SKIP", worker="distiller", session=session, reason="no_new_bytes")
+            c.log("SKIP", worker="distiller", session=session,
+                  reason="no_new_bytes", transcript=args.transcript or "(empty)",
+                  cursor=cursor)
             return
 
         digest, substantive = build_digest(data)

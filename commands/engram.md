@@ -1,6 +1,6 @@
 ---
-description: Inspect and manage Engram memories (status | search <terms> | forget <slug> | clear | clear-logs | prune | reindex)
-argument-hint: "[status | search <terms> | forget <slug> | clear [--all] | clear-logs | prune | reindex]"
+description: Inspect and manage Engram memories (status | search <terms> | forget <slug> | clear | clear-logs | prune | reindex | doctor)
+argument-hint: "[status | search <terms> | forget <slug> | clear [--all] | clear-logs | prune | reindex | doctor]"
 allowed-tools: Bash(python3:*)
 ---
 

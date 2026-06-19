@@ -9,10 +9,12 @@
     memctl.py clear-logs          clear ONLY memory.log; memories/state untouched
     memctl.py prune               drop empty/untitled (orphaned) memories
     memctl.py reindex             rebuild INDEX.md from the memory files
+    memctl.py doctor              self-diagnostic: check store, cache, hooks, log health
 
 `search` deliberately calls common.rank — the exact function per-prompt recall
 uses — so what you debug here is what runs live.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -173,10 +175,155 @@ def _recent_log_events(tags, limit=5):
     return hits[-limit:]
 
 
+def cmd_doctor(_args):
+    """Self-diagnostic: check everything that can go wrong in one shot."""
+    ok_count, warn_count, err_count = 0, 0, 0
+
+    def ok(msg):
+        nonlocal ok_count; ok_count += 1; print(f"  ok   {msg}")
+    def warn(msg):
+        nonlocal warn_count; warn_count += 1; print(f"  WARN {msg}")
+    def err(msg):
+        nonlocal err_count; err_count += 1; print(f"  ERR  {msg}")
+
+    print("Engram doctor")
+    print("=============")
+    print()
+
+    # 1. Store writable
+    print("store:")
+    store = c.store_root()
+    if store.exists():
+        ok(f"{store}")
+        test_file = store / ".doctor-probe"
+        try:
+            test_file.write_text("probe")
+            test_file.unlink()
+            ok("store is writable")
+        except OSError as e:
+            err(f"store is NOT writable: {e}")
+    else:
+        try:
+            c.ensure_store()
+            ok(f"created {store}")
+        except OSError as e:
+            err(f"cannot create store: {e}")
+
+    # 2. Plugin cache vs source freshness
+    print("\nplugin cache:")
+    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", ""))
+    source_root = Path(__file__).resolve().parent.parent
+    if plugin_root and plugin_root.exists() and plugin_root.resolve() != source_root.resolve():
+        import filecmp
+        stale = []
+        for dirpath, _, filenames in os.walk(source_root):
+            rel = Path(dirpath).relative_to(source_root)
+            if any(p in str(rel) for p in ['.git', '__pycache__', '.claude-plugin', '.claude', 'dist']):
+                continue
+            for fname in filenames:
+                src = Path(dirpath) / fname
+                cached = plugin_root / rel / fname
+                if not cached.exists():
+                    stale.append(str(rel / fname) + " (missing in cache)")
+                elif not filecmp.cmp(str(src), str(cached), shallow=False):
+                    stale.append(str(rel / fname))
+        if stale:
+            warn(f"cache is stale — {len(stale)} file(s) differ from source:")
+            for f in stale[:10]:
+                print(f"         {f}")
+            if len(stale) > 10:
+                print(f"         … and {len(stale) - 10} more")
+            print(f"       fix: bash {source_root}/scripts/update.sh")
+        else:
+            ok("cache matches source")
+    elif plugin_root and plugin_root.exists():
+        ok("running from source directly")
+    else:
+        warn("CLAUDE_PLUGIN_ROOT not set — cannot check cache freshness")
+
+    # 3. Distiller reachable
+    print("\ndistiller:")
+    distiller = Path(__file__).resolve().parent / "distiller.py"
+    if distiller.exists():
+        ok(f"{distiller.name} exists")
+    else:
+        err(f"distiller.py not found at {distiller}")
+    import shutil
+    if shutil.which("claude"):
+        ok("'claude' CLI found on PATH")
+    else:
+        err("'claude' CLI not found on PATH — distiller cannot run")
+
+    # 4. Hooks configuration
+    print("\nhooks:")
+    hooks_json = source_root / "hooks" / "hooks.json"
+    if hooks_json.exists():
+        ok("hooks/hooks.json exists")
+        try:
+            import json as _json
+            hooks_data = _json.loads(hooks_json.read_text())
+            hook_count = sum(len(v) for v in hooks_data.get("hooks", {}).values())
+            ok(f"{hook_count} hook(s) configured across {len(hooks_data.get('hooks', {}))} event(s)")
+        except Exception as e:
+            err(f"hooks.json parse error: {e}")
+    else:
+        err(f"hooks/hooks.json not found at {hooks_json}")
+
+    # 5. Recent errors in log
+    print("\nlog health:")
+    log_file = c.log_path()
+    if log_file.exists():
+        try:
+            lines = log_file.read_text(encoding="utf-8").splitlines()
+            ok(f"{len(lines)} line(s) in memory.log")
+            errors = [ln for ln in lines if " ERROR " in ln]
+            if errors:
+                warn(f"{len(errors)} error(s) in log — most recent:")
+                for e_line in errors[-3:]:
+                    print(f"         {e_line}")
+            else:
+                ok("no errors in log")
+            skips = [ln for ln in lines[-20:] if " SKIP " in ln and "reason=locked" in ln]
+            if len(skips) > 3:
+                warn(f"{len(skips)} lock-skips in last 20 entries — distiller may be stuck")
+        except OSError as e:
+            err(f"cannot read log: {e}")
+    else:
+        warn("no log file yet — normal before first capture")
+
+    # 6. Stale locks
+    print("\nlocks:")
+    import time as _time
+    locks = list(c.locks_dir().glob("*.lock")) if c.locks_dir().exists() else []
+    if locks:
+        for lp in locks:
+            age = _time.time() - lp.stat().st_mtime
+            if age > c.STALE_LOCK_SECS:
+                warn(f"stale lock: {lp.name} ({int(age)}s old) — will auto-break on next run")
+            else:
+                ok(f"active lock: {lp.name} ({int(age)}s old)")
+    else:
+        ok("no locks held")
+
+    # 7. Commands file
+    print("\ncommands:")
+    cmd_file = Path.home() / ".claude" / "commands" / "engram.md"
+    if cmd_file.exists():
+        ok(f"{cmd_file}")
+    else:
+        warn(f"engram.md not in ~/.claude/commands/ — /engram won't work")
+
+    print()
+    total = ok_count + warn_count + err_count
+    print(f"{ok_count}/{total} ok, {warn_count} warning(s), {err_count} error(s)")
+    if err_count:
+        sys.exit(1)
+
+
 COMMANDS = {
     "status": cmd_status, "search": cmd_search, "forget": cmd_forget,
     "clear": cmd_clear, "clear-logs": cmd_clear_logs,
-    "prune": cmd_prune, "reindex": cmd_reindex,
+    "prune": cmd_prune, "reindex": cmd_reindex, "doctor": cmd_doctor,
 }
 
 

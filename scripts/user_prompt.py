@@ -53,12 +53,16 @@ def main():
 
         if not selected:
             c.emit_empty()
-            return
+        else:
+            body = "<recalled-memories>\n" + "\n".join(b for _, _, b in selected) \
+                   + "</recalled-memories>"
+            c.add_injected(session, list(sel_slugs))
+            c.emit_additional_context("UserPromptSubmit", body)
 
-        body = "<recalled-memories>\n" + "\n".join(b for _, _, b in selected) \
-               + "</recalled-memories>"
-        c.add_injected(session, list(sel_slugs))
-        c.emit_additional_context("UserPromptSubmit", body)
+        if not c.stop_hook_active(data):
+            transcript = data.get("transcript_path", "")
+            ok = c.spawn_distiller(session, transcript)
+            c.log("SPAWN", hook="UserPromptSubmit", session=session, ok=ok)
     except Exception as e:
         c.log("ERROR", hook="user_prompt", err=repr(e))
         c.emit_empty()

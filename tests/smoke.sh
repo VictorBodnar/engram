@@ -48,6 +48,16 @@ again=$(echo "$PROMPT" | $PY "$S/user_prompt.py")
 check "same prompt does NOT re-inject"    "[ '$again' = '{}' ]"
 
 # --------------------------------------------------------------------------- #
+echo "2b. prompt-submit distiller — UserPromptSubmit spawns distiller"
+DISTILL_PROMPT='{"session_id":"smoke-distill","cwd":"/tmp/anyproj","prompt":"prefer aws cli over sdk","transcript_path":"'"$FIX/transcript.jsonl"'"}'
+echo "$DISTILL_PROMPT" | CLAUDE_MEMORY_FAKE_LLM="$FIX/distilled.json" $PY "$S/user_prompt.py" > /dev/null
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  log | grep -q "SPAWN hook=UserPromptSubmit session=smoke-distill" && break
+  sleep 0.3
+done
+check "UserPromptSubmit spawns distiller"  "log | grep -q 'SPAWN hook=UserPromptSubmit session=smoke-distill'"
+
+# --------------------------------------------------------------------------- #
 echo "3. warm — SessionStart injects an index"
 echo '{"session_id":"smoke2","cwd":"/tmp/anyproj","source":"startup"}' | $PY "$S/session_start.py" > "$WORK/warm.txt"
 check "SessionStart injects index"        "grep -q 'Engram memory' '$WORK/warm.txt'"
