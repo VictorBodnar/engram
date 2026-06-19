@@ -19,33 +19,33 @@ store_size="(not present)"
 
 has_plugin=false
 cache_path=""
-if [ -f "$INSTALLED" ] && python3 -c "
-import json, sys
-d = json.load(open('$INSTALLED'))
-sys.exit(0 if any('engram' in k for k in d.get('plugins', {})) else 1)
-" 2>/dev/null; then
-  has_plugin=true
-  cache_path="$(python3 -c "
-import json
-d = json.load(open('$INSTALLED'))
-for k, entries in d.get('plugins', {}).items():
-    if 'engram' in k:
+if [ -f "$INSTALLED" ]; then
+  cache_path="$(ENGRAM_PATH="$INSTALLED" python3 -c '
+import json, os
+d = json.load(open(os.environ["ENGRAM_PATH"]))
+for k, entries in d.get("plugins", {}).items():
+    if "engram" in k:
         for e in entries:
-            p = e.get('installPath', '')
+            p = e.get("installPath", "")
             if p:
                 print(p)
                 break
         break
-")"
+' 2>/dev/null)" || true
+  ENGRAM_PATH="$INSTALLED" python3 -c '
+import json, os, sys
+d = json.load(open(os.environ["ENGRAM_PATH"]))
+sys.exit(0 if any("engram" in k for k in d.get("plugins", {})) else 1)
+' 2>/dev/null && has_plugin=true
 fi
 
 has_marketplace=false
-if [ -f "$KNOWN_MKT" ] && python3 -c "
-import json, sys
-d = json.load(open('$KNOWN_MKT'))
-sys.exit(0 if any('engram' in k for k in d) else 1)
-" 2>/dev/null; then
-  has_marketplace=true
+if [ -f "$KNOWN_MKT" ]; then
+  ENGRAM_PATH="$KNOWN_MKT" python3 -c '
+import json, os, sys
+d = json.load(open(os.environ["ENGRAM_PATH"]))
+sys.exit(0 if any("engram" in k for k in d) else 1)
+' 2>/dev/null && has_marketplace=true
 fi
 
 has_command=false
@@ -77,7 +77,7 @@ if [ -n "$cache_path" ]; then
 fi
 
 if $has_marketplace; then
-  echo "  [x] Remove engram-local marketplace           ($KNOWN_MKT)"
+  echo "  [x] Remove engram marketplace entry           ($KNOWN_MKT)"
 else
   echo "  [-] Marketplace entry not found                (nothing to remove)"
 fi
@@ -127,18 +127,18 @@ fi
 # --- Execute ---------------------------------------------------------------------
 
 if $has_plugin; then
-  python3 -c "
-import json
-path = '$INSTALLED'
+  ENGRAM_PATH="$INSTALLED" python3 -c '
+import json, os
+path = os.environ["ENGRAM_PATH"]
 with open(path) as f:
     d = json.load(f)
-keys = [k for k in d.get('plugins', {}) if 'engram' in k]
+keys = [k for k in d.get("plugins", {}) if "engram" in k]
 for k in keys:
-    del d['plugins'][k]
-with open(path, 'w') as f:
+    del d["plugins"][k]
+with open(path, "w") as f:
     json.dump(d, f, indent=2)
-    f.write('\n')
-"
+    f.write("\n")
+'
   echo "  Removed plugin entry."
 fi
 
@@ -154,18 +154,18 @@ if [ -n "$cache_path" ]; then
 fi
 
 if $has_marketplace; then
-  python3 -c "
-import json
-path = '$KNOWN_MKT'
+  ENGRAM_PATH="$KNOWN_MKT" python3 -c '
+import json, os
+path = os.environ["ENGRAM_PATH"]
 with open(path) as f:
     d = json.load(f)
-keys = [k for k in d if 'engram' in k]
+keys = [k for k in d if "engram" in k]
 for k in keys:
     del d[k]
-with open(path, 'w') as f:
+with open(path, "w") as f:
     json.dump(d, f, indent=2)
-    f.write('\n')
-"
+    f.write("\n")
+'
   echo "  Removed marketplace entry."
 fi
 
@@ -180,21 +180,21 @@ if [ -e "$STORE" ]; then
 fi
 
 if $has_env; then
-  python3 -c "
-import json
-path = '$SETTINGS'
+  ENGRAM_PATH="$SETTINGS" python3 -c '
+import json, os
+path = os.environ["ENGRAM_PATH"]
 with open(path) as f:
     d = json.load(f)
-env = d.get('env', {})
-env.pop('CLAUDE_CODE_DISABLE_AUTO_MEMORY', None)
+env = d.get("env", {})
+env.pop("CLAUDE_CODE_DISABLE_AUTO_MEMORY", None)
 if not env:
-    d.pop('env', None)
+    d.pop("env", None)
 else:
-    d['env'] = env
-with open(path, 'w') as f:
+    d["env"] = env
+with open(path, "w") as f:
     json.dump(d, f, indent=2)
-    f.write('\n')
-"
+    f.write("\n")
+'
   echo "  Removed auto-memory env var from settings."
 fi
 

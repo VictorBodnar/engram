@@ -16,23 +16,31 @@ if [ ! -f "$INSTALLED" ]; then
   exit 1
 fi
 
-CACHE_DIR=$(python3 -c "
-import json, sys
-d = json.load(open('$INSTALLED'))
-for key, entries in d.get('plugins', {}).items():
-    if 'engram' in key:
+CACHE_DIR=$(ENGRAM_PATH="$INSTALLED" python3 -c '
+import json, os, sys
+d = json.load(open(os.environ["ENGRAM_PATH"]))
+for key, entries in d.get("plugins", {}).items():
+    if "engram" in key:
         for e in entries:
-            p = e.get('installPath', '')
+            p = e.get("installPath", "")
             if p:
                 print(p)
                 sys.exit(0)
 sys.exit(1)
-" 2>/dev/null) || true
+' 2>/dev/null) || true
 
-if [ -z "$CACHE_DIR" ] || [ ! -d "$CACHE_DIR" ]; then
+if [ -z "$CACHE_DIR" ]; then
   echo "error: engram cache directory not found — is the plugin installed?"
-  echo "  Install with: /plugin marketplace add ~/claude-memory-plugin"
-  echo "                /plugin install engram"
+  exit 1
+fi
+
+if [ -L "$CACHE_DIR" ]; then
+  echo "cache is already symlinked — edits are live, nothing to sync."
+  exit 0
+fi
+
+if [ ! -d "$CACHE_DIR" ]; then
+  echo "error: cache directory does not exist: $CACHE_DIR"
   exit 1
 fi
 

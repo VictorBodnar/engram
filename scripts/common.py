@@ -125,7 +125,10 @@ def lock_path(session_id: str) -> Path:
 
 def _safe(name: str) -> str:
     """Sanitize an id for use as a filename."""
-    return re.sub(r"[^A-Za-z0-9_.-]", "_", str(name or "unknown"))
+    s = re.sub(r"[^A-Za-z0-9_.-]", "_", str(name or "unknown"))
+    if s in (".", "..") or not s:
+        s = "_dot_"
+    return s[:200]
 
 
 # --------------------------------------------------------------------------- #
