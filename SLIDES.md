@@ -31,7 +31,7 @@ Every new Claude Code session starts from zero.
 
 |  | **Capture** (write) | **Recall** (read) |
 |---|---|---|
-| Hook | Stop / PreCompact / SessionEnd | SessionStart + UserPromptSubmit |
+| Hook | Stop / UserPromptSubmit / PreCompact / SessionEnd | SessionStart + UserPromptSubmit |
 | LLM? | yes — **detached** Haiku, off the hot path | **never** — integer scoring |
 | Cost | hooks return in ms | in-hook, deterministic |
 
@@ -42,12 +42,12 @@ The expensive, fuzzy part runs in the background. The fast, exact part runs inli
 ## Capture — async, never blocks
 
 ```
-Stop hook ─► spawn detached distiller ─► return {} in ms
-                     │
-                     ▼  (background)
-        read new transcript bytes (byte cursor)
-        ask Haiku "what's worth keeping?"
-        write markdown memories + rebuild INDEX
+Stop / UserPromptSubmit ─► spawn detached distiller ─► return {} in ms
+PreCompact / SessionEnd      │
+                             ▼  (background)
+              read new transcript bytes (byte cursor)
+              ask Haiku "what's worth keeping?"
+              write markdown memories + rebuild INDEX
 ```
 
 - The **only** place an LLM runs — and it's never awaited.
@@ -111,15 +111,14 @@ not retrieved *after* you happen to name them.
 
 ---
 
-## Install in 3 commands (offline)
+## Install
 
 ```text
-unzip engram-0.1.0.zip -d ~/
-/plugin marketplace add ~/engram-0.1.0
-/plugin install engram@engram-local
+/plugin marketplace add https://github.com/VictorBodnar/engram
+/plugin install engram
 ```
 
-Approve the hooks · set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` · `/engram status`.
+Approve the 5 hooks · set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` · `/engram status`.
 
 **Uninstall:** `/plugin uninstall …` + `rm -rf ~/.claude/memory-store`. Nothing left behind.
 
@@ -130,7 +129,7 @@ Approve the hooks · set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` · `/engram status`
 The integer scorer is the first rung of a ladder — each step adds a signal as a
 **plain number**, never an opaque model:
 
-1. keyword + title + project + type  ← *today*
+1. keyword + title + project + type  ← *current (v0.2)*
 2. recency / decay weighting
 3. assistant-turn recall (catch "I say X, you do Y")
 4. optional embedding signal, **fused alongside** keywords — never replacing them
