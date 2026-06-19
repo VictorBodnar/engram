@@ -1,0 +1,12 @@
+{
+  "name": "engram-local",
+  "owner": { "name": "Victor Bodnar" },
+  "description": "Local marketplace for the Engram memory plugin. Add with: /plugin marketplace add <path-to-this-repo>",
+  "plugins": [
+    {
+      "name": "engram",
+      "source": ".",
+      "description": "Deterministic, hook-based memory for Claude Code."
+    }
+  ]
+}

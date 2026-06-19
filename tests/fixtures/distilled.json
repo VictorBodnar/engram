@@ -1,0 +1,11 @@
+[
+  {
+    "action": "create",
+    "slug": "split-shell-commands",
+    "type": "correction",
+    "title": "Split shell commands into separate Bash calls",
+    "project": "global",
+    "keywords": ["shell", "bash", "commands", "chaining", "permission"],
+    "body": "Don't chain shell commands with &&. Run each command as its own separate Bash call so permission allowlists match reliably. Applies to all projects."
+  }
+]

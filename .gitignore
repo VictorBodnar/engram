@@ -1,0 +1,17 @@
+# Engram runtime data — never committed (lives in the user's store, not the repo)
+.engram-store/
+*.log.1
+
+# Dev-env Claude Code settings (machine-local; the plugin's hooks live in hooks/hooks.json)
+.claude/
+
+# Build artifacts
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor cruft
+.DS_Store

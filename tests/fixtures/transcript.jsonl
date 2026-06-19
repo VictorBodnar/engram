@@ -1,0 +1,8 @@
+{"type":"user","message":{"role":"user","content":"can you build the project and commit the result"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I'll build and then commit."},{"type":"tool_use","name":"Bash","input":{"command":"npm run build && git commit -am wip"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"build ok"}]}}
+{"type":"user","message":{"role":"user","content":"Don't chain shell commands with && — split them into separate Bash calls so the permission allowlist matches."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Understood. From now on I'll run each shell command as its own Bash call instead of chaining with &&."}]}}
+{"type":"user","message":{"role":"user","content":"why do the payments-api integration tests pass locally but do nothing in CI?"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"The payments-api integration suite silently no-ops unless the env var LOCALSTACK=1 is exported. Your local shell sets it but CI does not, so the tests skip every case. Add LOCALSTACK=1 to the CI environment to fix it."}]}}
+{"type":"user","message":{"role":"user","content":"got it, that was the issue — adding it to CI now"}}
