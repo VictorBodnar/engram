@@ -1,73 +1,14 @@
 #!/usr/bin/env bash
-# Engram updater — sync source files into the plugin cache so changes take
-# effect without a full reinstall cycle.
+# Engram updater — thin wrapper around manage.py repair.
 #
-#   bash scripts/update.sh          # sync, then remind to /reload-plugins
-#   bash scripts/update.sh --check  # just show what's out of date
+#   bash scripts/update.sh          # verify + repair if needed
+#   bash scripts/update.sh --check  # just check health (no changes)
+#
+# With direct hooks, "update" means "repair" — scripts are referenced in-place
+# so edits are always live. This just verifies the hooks are still registered.
 set -euo pipefail
-
-CLAUDE_DIR="${HOME}/.claude"
-INSTALLED="$CLAUDE_DIR/plugins/installed_plugins.json"
-
-# --- Find the cache path from installed_plugins.json --------------------------
-
-if [ ! -f "$INSTALLED" ]; then
-  echo "error: $INSTALLED not found — is Engram installed?"
-  exit 1
-fi
-
-CACHE_DIR=$(ENGRAM_PATH="$INSTALLED" python3 -c '
-import json, os, sys
-d = json.load(open(os.environ["ENGRAM_PATH"]))
-for key, entries in d.get("plugins", {}).items():
-    if "engram" in key:
-        for e in entries:
-            p = e.get("installPath", "")
-            if p:
-                print(p)
-                sys.exit(0)
-sys.exit(1)
-' 2>/dev/null) || true
-
-if [ -z "$CACHE_DIR" ]; then
-  echo "error: engram cache directory not found — is the plugin installed?"
-  exit 1
-fi
-
-if [ -L "$CACHE_DIR" ]; then
-  echo "cache is already symlinked — edits are live, nothing to sync."
-  exit 0
-fi
-
-if [ ! -d "$CACHE_DIR" ]; then
-  echo "error: cache directory does not exist: $CACHE_DIR"
-  exit 1
-fi
-
-SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-
-# --- Check mode ---------------------------------------------------------------
-
 if [ "${1:-}" = "--check" ]; then
-  changes=$(diff -rq "$SOURCE_DIR" "$CACHE_DIR" \
-    --exclude='.git' --exclude='__pycache__' --exclude='.claude-plugin' \
-    --exclude='.claude' --exclude='dist' 2>/dev/null || true)
-  if [ -z "$changes" ]; then
-    echo "up to date — cache matches source"
-  else
-    echo "out of date:"
-    echo "$changes" | sed 's/^/  /'
-  fi
-  exit 0
+  exec python3 "$(dirname "$0")/manage.py" verify
+else
+  exec python3 "$(dirname "$0")/manage.py" repair
 fi
-
-# --- Sync ---------------------------------------------------------------------
-
-rsync -a --delete \
-  --exclude='.git' --exclude='__pycache__' --exclude='.claude-plugin' \
-  --exclude='.claude' --exclude='dist' \
-  "$SOURCE_DIR/" "$CACHE_DIR/"
-
-echo "synced $SOURCE_DIR → $CACHE_DIR"
-echo
-echo "Run /reload-plugins in Claude Code to pick up the changes."

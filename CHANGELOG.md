@@ -4,6 +4,50 @@ All notable changes to Engram are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-06-21
+
+Major redesign: drop the plugin system in favor of direct hooks for maximum
+portability, resilience, and mutability.
+
+### Changed
+- **Direct hooks deployment** — Engram now registers hooks directly in
+  `~/.claude/settings.json` instead of going through the plugin registry system.
+  No more cache directories, symlinks, marketplace registration, or
+  `installed_plugins.json` manipulation. Clone anywhere, install once, edits are
+  live immediately.
+- **Single lifecycle manager** (`scripts/manage.py`) — replaces the three shell
+  scripts with one Python script (stdlib only) that handles install, uninstall,
+  repair, verify, and migrate. The shell wrappers still work as thin delegates.
+- **Self-healing** — `manage.py repair` fixes any broken state (missing hooks,
+  stale paths, missing command file) without losing data.
+- **Health check** — `manage.py verify` exits 0 if healthy, 1 if not. Suitable
+  for CI and scripted checks.
+- **Migration path** — `manage.py migrate` converts an existing plugin-based
+  install to direct hooks, cleaning all plugin traces.
+- **No rsync dependency** — the old `update.sh` required rsync; the new system
+  has zero external dependencies beyond Python 3.9 stdlib.
+- **No version-tagged paths** — hooks point at a fixed location; no path changes
+  on version bumps.
+- **Command file robustness** — `/engram` finds its scripts via
+  `~/.claude/engram.json` breadcrumb, falling back to `CLAUDE_PLUGIN_ROOT` for
+  backwards compatibility.
+
+### Added
+- **Lifecycle tests** (`tests/lifecycle.sh`) — 36 end-to-end tests that simulate
+  real sessions: user states corrections → distiller captures → next session
+  recalls. Covers cross-session memory, updates, dedup, project isolation, and
+  resilience under broken conditions.
+- **Manage tests** (`tests/manage.sh`) — 30 tests covering install/verify/repair/
+  uninstall lifecycle, idempotency, and preservation of existing settings.
+- **CI runs all three suites** — smoke (36) + lifecycle (36) + manage (30) =
+  102 offline tests on Python 3.9, 3.12, and 3.14.
+
+### Removed
+- Plugin registry dependency (`installed_plugins.json`, `known_marketplaces.json`)
+- Cache directory system (`~/.claude/plugins/cache/engram/`)
+- `rsync` dependency for updates
+- Version-tagged install paths
+
 ## [0.2.0] — 2026-06-19
 
 Plugin-only distribution, CI pipeline, and security hardening.

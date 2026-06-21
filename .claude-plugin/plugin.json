@@ -1,7 +1,7 @@
 {
   "name": "engram",
   "displayName": "Engram",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Deterministic, hook-based memory for Claude Code: async LLM capture off the hot path, keyword recall in-hook, plain-markdown store you can grep.",
   "author": { "name": "Victor Bodnar" },
   "keywords": ["memory", "hooks", "recall", "deterministic", "markdown"],

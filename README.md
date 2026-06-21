@@ -56,12 +56,18 @@ individual commands reliably.
 
 ## Quick Start
 
-```
-/plugin marketplace add https://github.com/VictorBodnar/engram
-/plugin install engram
+### Install (one command)
+
+```bash
+git clone https://github.com/VictorBodnar/engram.git ~/.engram
+python3 ~/.engram/scripts/manage.py install
 ```
 
-Approve the 5 hooks when prompted, then verify:
+That's it. Hooks are registered directly in `~/.claude/settings.json`, pointing
+at the scripts in place. Edits are live immediately — no rebuild, no sync, no
+cache to invalidate.
+
+Verify:
 
 ```
 /engram status
@@ -78,9 +84,63 @@ recent distiller activity:
   (none logged yet)
 ```
 
-> **Recommended:** set `"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"` in the `env`
-> block of `~/.claude/settings.json` so Engram and native auto-memory don't
-> double-inject. The installer does this for dev installs automatically.
+### Update
+
+There's no update step. Scripts are referenced directly — `git pull` is enough.
+If you want to confirm everything is healthy:
+
+```bash
+python3 ~/.engram/scripts/manage.py verify
+```
+
+If something broke (moved the repo, etc.):
+
+```bash
+python3 ~/.engram/scripts/manage.py repair
+```
+
+### Uninstall
+
+```bash
+python3 ~/.engram/scripts/manage.py uninstall
+```
+
+---
+
+## How it deploys
+
+Engram uses Claude Code's native **settings.json hooks** — the simplest, most
+stable integration point. No plugin registry, no cache directories, no symlinks,
+no version-tagged paths.
+
+```
+~/.claude/settings.json (hooks section):
+  SessionStart     → python3 /path/to/engram/scripts/session_start.py
+  UserPromptSubmit → python3 /path/to/engram/scripts/user_prompt.py
+  Stop             → python3 /path/to/engram/scripts/stop_distill.py
+  PreCompact       → python3 /path/to/engram/scripts/precompact.py
+  SessionEnd       → python3 /path/to/engram/scripts/session_end.py
+```
+
+**Why this model:**
+- Zero intermediaries — hooks point directly at scripts
+- Edit any file, it's live instantly
+- Survives Claude Code updates (settings.json is your config, not internal state)
+- One `git pull` to update, no sync/rebuild
+- Works everywhere: macOS, Linux, WSL
+- Trivial to inspect: `cat ~/.claude/settings.json`
+- Self-healing: `manage.py repair` fixes anything
+
+### Migrating from plugin install
+
+If you previously installed via `/plugin install engram`:
+
+```bash
+python3 scripts/manage.py migrate
+```
+
+This removes all plugin registry traces and switches to direct hooks.
+Your memory store is preserved.
 
 ---
 
@@ -266,7 +326,7 @@ Recall surfaces topic-specific knowledge *when* you mention it.
 | `/engram clear-logs` | Clear only `memory.log`; memories untouched |
 | `/engram prune` | Drop empty/untitled orphan memories |
 | `/engram reindex` | Rebuild `INDEX.md` from memory files |
-| `/engram doctor` | Self-diagnostic: store, cache, hooks, log health |
+| `/engram doctor` | Self-diagnostic: store, hooks, log health |
 
 ### Example: `/engram search`
 
@@ -281,12 +341,29 @@ The `→` marks memories that would be injected (score ≥ 3 and within the top 
 
 ---
 
+## Lifecycle management
+
+All lifecycle operations go through one script:
+
+```bash
+python3 scripts/manage.py install     # register hooks in settings.json
+python3 scripts/manage.py verify      # exit 0 if healthy, 1 if not
+python3 scripts/manage.py repair      # fix broken install in-place
+python3 scripts/manage.py uninstall   # remove hooks, data, config
+python3 scripts/manage.py migrate     # move from plugin system to direct hooks
+```
+
+The shell wrappers (`install.sh`, `update.sh`, `uninstall.sh`) still work —
+they delegate to `manage.py`.
+
+---
+
 ## Configuration
 
 | Env var | Default | Effect |
 |---|---|---|
 | `CLAUDE_MEMORY_HOME` | `~/.claude/memory-store` | Store location. Set per-project to isolate stores. |
-| `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | *(unset)* | Set to `1` to disable native auto-memory (recommended). |
+| `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | *(unset)* | Set to `1` to disable native auto-memory (set by installer). |
 | `CLAUDE_MEMORY_FAKE_LLM` | *(unset)* | Path to canned JSON — distiller reads it instead of calling Haiku (for testing). |
 
 ---
@@ -302,9 +379,6 @@ Engram doctor
 store:
   ok   /Users/you/.claude/memory-store
   ok   store is writable
-
-plugin cache:
-  ok   cache matches source
 
 distiller:
   ok   distiller.py exists
@@ -324,7 +398,7 @@ locks:
 commands:
   ok   /Users/you/.claude/commands/engram.md
 
-12/12 ok, 0 warning(s), 0 error(s)
+10/10 ok, 0 warning(s), 0 error(s)
 ```
 
 ### Common issues
@@ -334,7 +408,8 @@ commands:
 | 0 memories after install | Normal — first capture happens after a substantive turn. |
 | No memories ever appear | Check `claude` CLI is on PATH and authenticated. `grep ERROR` in the log. |
 | Duplicate injections | Native auto-memory is still on. Set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. |
-| Stale cache after updating | Run `bash scripts/update.sh` or reinstall. `/engram doctor` will tell you. |
+| Hooks not firing | Run `python3 scripts/manage.py verify` then `repair` if unhealthy. |
+| Moved the repo | Run `python3 scripts/manage.py repair` — it re-registers the new paths. |
 
 ### Log grep cheat sheet
 
@@ -354,12 +429,15 @@ Every event is keyed by `session=` so concurrent terminals stay legible.
 ```bash
 git clone https://github.com/VictorBodnar/engram.git
 cd engram
-bash scripts/install.sh      # symlinks cache → source; edits go live instantly
-bash tests/smoke.sh          # 36 offline end-to-end tests, no network
-bash demo/demo.sh            # narrated walkthrough (also offline)
+python3 scripts/manage.py install    # hooks point at source; edits are live
+bash tests/smoke.sh                  # 36 offline unit tests
+bash tests/lifecycle.sh              # 36 end-to-end memory lifecycle tests
+bash tests/manage.sh                 # 30 install/repair/uninstall tests
 ```
 
-**PR workflow:** every PR runs smoke tests + config validation via GitHub Actions.
+**102 total tests**, all offline (no network, no live LLM).
+
+**PR workflow:** every PR runs all test suites + config validation via GitHub Actions.
 On merge to main, the pipeline auto-tags and creates a GitHub release from the
 version in `.claude-plugin/plugin.json`. Bump the version in your PR.
 
@@ -369,7 +447,7 @@ version in `.claude-plugin/plugin.json`. Bump the version in your PR.
 
 - **Python 3.9+** (stdlib only — zero third-party packages)
 - **`claude` CLI on PATH**, authenticated (reuses Claude Code's own auth — no separate API key)
-- **Claude Code** with plugin support
+- **Claude Code** with hooks support
 
 ## License
 
