@@ -18,29 +18,62 @@ jobs:
       - name: Run smoke tests
         run: bash tests/smoke.sh
 
-      - name: Read version
-        id: version
+      - name: Determine version bump
+        id: bump
         run: |
-          VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Check if tag exists
-        id: check
-        run: |
-          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+          # Collect commit messages since last tag
+          COMMITS=$(git log "$LATEST_TAG"..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
+
+          BUMP="patch"
+          if echo "$COMMITS" | grep -qiE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qiE "^feat(\(.+\))?:"; then
+            BUMP="minor"
           fi
 
+          IFS='.' read -r major minor patch <<< "${LATEST_TAG#v}"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+
+          NEW_VERSION="$major.$minor.$patch"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Bump: $BUMP ($LATEST_TAG → v$NEW_VERSION)"
+
+      - name: Update plugin.json version
+        run: |
+          python3 -c "
+          import json
+          with open('.claude-plugin/plugin.json') as f:
+              d = json.load(f)
+          d['version'] = '${{ steps.bump.outputs.version }}'
+          with open('.claude-plugin/plugin.json', 'w') as f:
+              json.dump(d, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/plugin.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}"
+          git push
+
       - name: Create tag and release
-        if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git tag "v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
-          gh release create "v${{ steps.version.outputs.version }}" \
-            --title "Engram v${{ steps.version.outputs.version }}" \
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin "v${{ steps.bump.outputs.version }}"
+          gh release create "v${{ steps.bump.outputs.version }}" \
+            --title "Engram v${{ steps.bump.outputs.version }}" \
             --generate-notes
