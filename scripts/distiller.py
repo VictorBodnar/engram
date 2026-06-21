@@ -147,8 +147,10 @@ future sessions. Capture sparingly but RELIABLY: if a fact below is present, rec
 otherwise record nothing. Do not invent or pad.
 
 CAPTURE a memory whenever the excerpt contains one of these:
-- correction: a correction or working preference the user stated (commands, style, do/don't).
+- correction: a correction or working preference the user stated (commands, style, do/don't,
+  tool choices, library preferences). Even a single short sentence counts.
   e.g. "Don't chain shell commands with && — split into separate Bash calls."
+  e.g. "i wana use aws cli over sdk" → preference for CLI over SDK.
 - knowledge: a non-obvious, durable fact about this codebase or its environment — something a
   future session would waste time rediscovering.
   e.g. "payments-api: integration tests silently no-op unless LOCALSTACK=1 is set."
@@ -156,7 +158,8 @@ CAPTURE a memory whenever the excerpt contains one of these:
   e.g. "Chose SQS over Kafka for ingest; queue-migration TODO still open."
 
 A clearly-stated user correction, a non-obvious codebase/environment gotcha, or an explicit \
-decision SHOULD be captured — do not discard it as "minor".
+decision MUST be captured — even if it is only one sentence. Brevity does not mean unimportant. \
+A short "use X over Y" or "prefer X" is a durable preference — capture it.
 
 Do NOT capture: routine task steps, chit-chat, things obvious from reading the code, \
 secrets/credentials, or anything transient.
@@ -172,7 +175,7 @@ Return ONLY a JSON array of action objects — no prose, no code fence. Each obj
 "body": "<=120 words, concrete and self-contained"}}
 
 Rules:
-- Return [] ONLY when the excerpt genuinely contains none of the three kinds above.
+- Return [] ONLY when the excerpt is purely routine task execution with no preferences, decisions, or gotchas.
 - Use "update" with an existing slug when refining/correcting it; otherwise "create" a new kebab-case slug.
 - project: "{project}" for repo-specific facts, "global" for machine-wide preferences/corrections.
 - keywords: the lowercase words a future prompt would use to recall this memory.
