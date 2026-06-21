@@ -44,13 +44,16 @@ jobs:
         run: python3 scripts/manage.py install
       - name: Verify manage.py verify passes
         run: python3 scripts/manage.py verify
-      - name: Check version was bumped
+      - name: Validate commit messages
         run: |
           git fetch origin main --depth=1
-          CURRENT=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
-          MAIN=$(git show origin/main:.claude-plugin/plugin.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
-          if [ "$CURRENT" = "$MAIN" ]; then
-            echo "::warning::Version not bumped ($CURRENT). Update .claude-plugin/plugin.json version before merging."
-          else
-            echo "Version bumped: $MAIN → $CURRENT"
+          COMMITS=$(git log origin/main..HEAD --pretty=format:"%s")
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits"
+            exit 0
           fi
+          echo "$COMMITS" | while read -r msg; do
+            if ! echo "$msg" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?(!)?: .+"; then
+              echo "::warning::Non-conventional commit: $msg"
+            fi
+          done
