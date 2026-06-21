@@ -64,6 +64,33 @@ what you just typed"). There's no keyword scoring at warmup because there's no p
 
 ## Changes shipped during dogfooding
 
+### v0.3.0 — Direct hooks deployment redesign
+
+**Problem:** The plugin system (`installed_plugins.json`, cache directories, marketplace
+registration, version-tagged paths) added fragile intermediaries that broke on version bumps,
+repo moves, and Claude Code updates. Testing required reinstalling to get changes picked up.
+
+**Solution:** Drop the plugin system entirely. Hooks are registered directly in
+`~/.claude/settings.json` pointing at the scripts wherever they live. One `manage.py` handles
+all lifecycle operations.
+
+**What changed:**
+- Install writes 5 hook entries + 1 env var directly to `settings.json`
+- No cache, no symlinks, no version paths — scripts referenced in-place
+- `manage.py verify` (exit 0/1) and `manage.py repair` (self-healing)
+- `manage.py migrate` for existing plugin installs
+- Old shell scripts (`install.sh`, `update.sh`, `uninstall.sh`) are thin wrappers
+- 102 offline tests (smoke + lifecycle + manage) cover the full system
+- CI runs on Python 3.9, 3.12, and 3.14
+
+**Why this is better:**
+- Edit any script → live immediately (no sync, no cache invalidation)
+- `git pull` is the only update mechanism needed
+- Self-diagnosable + self-repairable
+- Zero external dependencies (no rsync, no plugin system internals)
+- Survives Claude Code updates (settings.json is your config, not internal state)
+
+
 ### Type-aware warmup — `session_start.py`
 - `WARMUP_PRIORITY = {"correction": 0, "state": 1, "knowledge": 2}`; sort key changed from
   `(date, slug)` → `(priority, date, slug)`.

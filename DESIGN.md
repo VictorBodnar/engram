@@ -172,6 +172,24 @@ never an opaque model:
 Optional, only if recall ever demands it: a vector signal fused *alongside* keyword, never
 replacing it.
 
+## Deployment model
+
+Engram uses **direct hooks in `~/.claude/settings.json`** — the native, stable integration
+point. No plugin registry, no cache directories, no symlinks, no version-tagged paths.
+
+```
+~/.claude/settings.json  →  hooks point at scripts wherever they live
+~/.claude/engram.json    →  breadcrumb: {"home": "/path/to/engram", "scripts": "..."}
+~/.claude/commands/engram.md  →  /engram slash command
+```
+
+`python3 scripts/manage.py install` writes all three. `repair` fixes anything that drifted.
+`verify` exits 0/1. This is the only lifecycle management needed — `git pull` updates the
+scripts in place.
+
+The old plugin-based deployment (`installed_plugins.json`, cache directories, marketplace
+registration) is supported via `manage.py migrate` for backwards compatibility.
+
 ## File map
 
 | Path | Role |
@@ -181,7 +199,10 @@ replacing it.
 | `scripts/user_prompt.py` | UserPromptSubmit — score, gate, inject top-3, dedup, `RECALL` log; also spawns distiller |
 | `scripts/stop_distill.py` · `precompact.py` · `session_end.py` | capture hooks — guard + detached spawn (+ housekeeping) |
 | `scripts/distiller.py` | the detached worker — the only LLM caller |
-| `scripts/memctl.py` | `/engram` CLI — status / search / forget / clear / prune / reindex |
-| `hooks/hooks.json` | global-install hook registration (`${CLAUDE_PLUGIN_ROOT}`) |
+| `scripts/memctl.py` | `/engram` CLI — status / search / forget / clear / prune / reindex / doctor |
+| `scripts/manage.py` | lifecycle: install / uninstall / repair / verify / migrate |
+| `hooks/hooks.json` | reference (documents hook events; not used at runtime) |
 | `.claude/settings.json` | project-scoped dogfood (`${CLAUDE_PROJECT_DIR}` + isolated store) |
-| `tests/smoke.sh` + `tests/fixtures/` | offline end-to-end gate |
+| `tests/smoke.sh` | 36 offline unit tests |
+| `tests/lifecycle.sh` | 36 end-to-end memory lifecycle tests |
+| `tests/manage.sh` | 30 install/repair/uninstall tests |

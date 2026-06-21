@@ -1,19 +1,20 @@
 {
+  "_note": "Reference only. Hooks are registered directly in ~/.claude/settings.json by manage.py install. This file documents the hook events Engram uses.",
   "hooks": {
     "SessionStart": [
-      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session_start.py\"", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "python3 \"/path/to/engram/scripts/session_start.py\" # engram-managed-hook", "timeout": 10 } ] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/user_prompt.py\"", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "python3 \"/path/to/engram/scripts/user_prompt.py\" # engram-managed-hook", "timeout": 10 } ] }
     ],
     "Stop": [
-      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/stop_distill.py\"", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "python3 \"/path/to/engram/scripts/stop_distill.py\" # engram-managed-hook", "timeout": 10 } ] }
     ],
     "PreCompact": [
-      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/precompact.py\"", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "python3 \"/path/to/engram/scripts/precompact.py\" # engram-managed-hook", "timeout": 10 } ] }
     ],
     "SessionEnd": [
-      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session_end.py\"", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "python3 \"/path/to/engram/scripts/session_end.py\" # engram-managed-hook", "timeout": 10 } ] }
     ]
   }
 }

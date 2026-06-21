@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,6 +17,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Smoke tests
         run: bash tests/smoke.sh
+      - name: Lifecycle tests
+        run: bash tests/lifecycle.sh
+      - name: Manage tests
+        run: bash tests/manage.sh
 
   validate:
     runs-on: ubuntu-latest
@@ -36,6 +40,10 @@ jobs:
           "
       - name: Validate hooks.json
         run: python3 -c "import json; json.load(open('hooks/hooks.json'))"
+      - name: Verify manage.py install works
+        run: python3 scripts/manage.py install
+      - name: Verify manage.py verify passes
+        run: python3 scripts/manage.py verify
       - name: Check version was bumped
         run: |
           git fetch origin main --depth=1
